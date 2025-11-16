@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userStore = require('../services/user.store');
+const { generateToken } = require('../utils/jwt.utils');
 
 // Middleware to check if user is authenticated
 const requireAuth = (req, res, next) => {
@@ -40,13 +41,33 @@ router.post('/signup', async (req, res, next) => {
       role: role || 'user'
     });
 
-    // Set session
+    // Set session (for backward compatibility)
     req.session.userId = newUser._id;
     req.session.userEmail = newUser.email;
 
-    // Return user without password
+    // Generate JWT token
+    const token = generateToken({
+      userId: newUser._id,
+      email: newUser.email,
+    });
+
+    // Return user without password and token
     const sanitizedUser = userStore.sanitizeUser(newUser);
-    res.status(200).json(sanitizedUser);
+    res.status(200).json({
+      token,
+      user: {
+        id: sanitizedUser._id,
+        email: sanitizedUser.email,
+        name: `${sanitizedUser.firstName} ${sanitizedUser.lastName}`,
+        firstName: sanitizedUser.firstName,
+        lastName: sanitizedUser.lastName,
+        profileImg: sanitizedUser.profileImg,
+        account: sanitizedUser.account,
+        score: sanitizedUser.score,
+        isAdmin: sanitizedUser.isAdmin,
+        role: sanitizedUser.role,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -74,13 +95,33 @@ router.post('/login', async (req, res, next) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Set session
+    // Set session (for backward compatibility)
     req.session.userId = user._id;
     req.session.userEmail = user.email;
 
-    // Return user without password
+    // Generate JWT token
+    const token = generateToken({
+      userId: user._id,
+      email: user.email,
+    });
+
+    // Return user without password and token
     const sanitizedUser = userStore.sanitizeUser(user);
-    res.status(200).json(sanitizedUser);
+    res.status(200).json({
+      token,
+      user: {
+        id: sanitizedUser._id,
+        email: sanitizedUser.email,
+        name: `${sanitizedUser.firstName} ${sanitizedUser.lastName}`,
+        firstName: sanitizedUser.firstName,
+        lastName: sanitizedUser.lastName,
+        profileImg: sanitizedUser.profileImg,
+        account: sanitizedUser.account,
+        score: sanitizedUser.score,
+        isAdmin: sanitizedUser.isAdmin,
+        role: sanitizedUser.role,
+      },
+    });
   } catch (error) {
     next(error);
   }
