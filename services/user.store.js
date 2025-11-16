@@ -25,7 +25,7 @@ async function initializeDefaultUser() {
       isAdmin: true,
       role: 'admin'
     });
-    console.log('✅ Default admin user created: admin@example.com / admin123');
+    console.log('Default admin user created: admin@example.com / admin123');
   }
 }
 

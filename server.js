@@ -47,6 +47,29 @@ app.use(
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 
+// Root route - helpful info
+app.get('/', (req, res) => {
+  res.json({
+    message: 'CryptoAdvisor Backend API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: {
+        signup: 'POST /api/auth/signup',
+        login: 'POST /api/auth/login',
+        logout: 'POST /api/auth/logout',
+        me: 'GET /api/auth/me',
+      },
+      users: {
+        list: 'GET /api/user',
+        get: 'GET /api/user/:id',
+        update: 'PUT /api/user/:id',
+        delete: 'DELETE /api/user/:id',
+      },
+    },
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend is running' });
@@ -65,7 +88,19 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📡 API available at http://localhost:${PORT}/api`);
-});
+app
+  .listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`API available at http://localhost:${PORT}/api`);
+  })
+  .on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use.`);
+      console.error(`Please stop the other process or use a different port.`);
+      console.error(`To find the process: netstat -ano | findstr :${PORT}`);
+      console.error(`To kill it: taskkill /PID <PID> /F`);
+    } else {
+      console.error('Server error:', err);
+    }
+    process.exit(1);
+  });
