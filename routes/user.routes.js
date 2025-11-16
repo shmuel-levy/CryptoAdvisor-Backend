@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userStore = require('../services/user.store');
+const { verifyTokenMiddleware } = require('../middleware/auth.middleware');
 
 // Middleware to check if user is authenticated
 const requireAuth = (req, res, next) => {
@@ -10,11 +11,32 @@ const requireAuth = (req, res, next) => {
   return res.status(401).json({ message: 'Unauthorized' });
 };
 
+// In-memory storage for user preferences (replace with database in production)
+const userPreferences = {};
+
 // GET /api/user - Get all users
 router.get('/', requireAuth, (req, res, next) => {
   try {
     const users = userStore.getAll();
     res.status(200).json(users);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/user/preferences - Get user onboarding data
+router.get('/preferences', verifyTokenMiddleware, (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+
+    const preferences = userPreferences[userId] || {
+      riskTolerance: null,
+      investmentGoals: [],
+      experienceLevel: null,
+      selectedCoins: [],
+    };
+
+    res.status(200).json(preferences);
   } catch (error) {
     next(error);
   }

@@ -1,9 +1,13 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
+const onboardingRoutes = require('./routes/onboarding.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
+const feedbackRoutes = require('./routes/feedback.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3030;
@@ -46,6 +50,9 @@ app.use(
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Root route - helpful info
 app.get('/', (req, res) => {
@@ -65,6 +72,17 @@ app.get('/', (req, res) => {
         get: 'GET /api/user/:id',
         update: 'PUT /api/user/:id',
         delete: 'DELETE /api/user/:id',
+        preferences: 'GET /api/user/preferences',
+      },
+      onboarding: {
+        save: 'POST /api/onboarding',
+      },
+      dashboard: {
+        get: 'GET /api/dashboard',
+      },
+      feedback: {
+        save: 'POST /api/feedback',
+        list: 'GET /api/feedback',
       },
     },
   });
