@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { verifyTokenMiddleware } = require('../middleware/auth.middleware');
 const userStore = require('../services/user.store');
+const coingeckoService = require('../services/coingecko.service');
 
 // GET /api/dashboard - Get dashboard data
-router.get('/', verifyTokenMiddleware, (req, res, next) => {
+router.get('/', verifyTokenMiddleware, async (req, res, next) => {
   try {
     const userId = req.user.userId;
 
@@ -14,7 +15,16 @@ router.get('/', verifyTokenMiddleware, (req, res, next) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Mock dashboard data (replace with actual data from your services)
+    // Get user preferences to personalize dashboard
+    const preferences = userStore.getPreferences(userId);
+    const interestedAssets = preferences?.interestedAssets || ['BTC', 'ETH'];
+
+    // Fetch coin prices based on user's interested assets
+    const coinPricesData = await coingeckoService.getCoinPrices(
+      interestedAssets
+    );
+
+    // Build dashboard data with real coin prices
     const dashboardData = {
       user: {
         id: user._id,
@@ -24,17 +34,14 @@ router.get('/', verifyTokenMiddleware, (req, res, next) => {
         score: user.score,
         account: user.account,
       },
-      portfolio: {
-        totalValue: 0,
-        coins: [],
-        performance: {
-          daily: 0,
-          weekly: 0,
-          monthly: 0,
-        },
+      coinPrices: {
+        coins: coinPricesData.coins,
+        updatedAt: new Date().toISOString(),
       },
-      recommendations: [],
-      recentActivity: [],
+      // Placeholder for other sections (will add in next phases)
+      marketNews: { news: [], count: 0 },
+      aiInsight: { insight: '', generatedAt: null },
+      meme: { url: '', title: '' },
     };
 
     res.status(200).json(dashboardData);
