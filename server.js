@@ -24,25 +24,45 @@ app.use('/images', express.static('imgs'));
 
 // CORS configuration - important for withCredentials: true
 // Support multiple origins (localhost for dev, Vercel for production)
-const allowedOrigins = process.env.FRONTEND_URL
-  ? process.env.FRONTEND_URL.split(',').map((url) => url.trim())
-  : ['http://localhost:5173'];
+let allowedOrigins = ['http://localhost:5173']; // Default for local dev
+
+if (process.env.FRONTEND_URL) {
+  // Support comma-separated URLs
+  allowedOrigins = process.env.FRONTEND_URL.split(',').map((url) => url.trim());
+}
+
+// Always add production Vercel URL if not already present
+const productionFrontend = 'https://crypto-advisor-three.vercel.app';
+if (!allowedOrigins.includes(productionFrontend)) {
+  allowedOrigins.push(productionFrontend);
+}
+
+// Log allowed origins
+console.log('Allowed CORS origins:', allowedOrigins);
 
 app.use(
   cors({
     origin: function (origin, callback) {
       // Allow requests with no origin (like mobile apps, Postman, curl)
-      if (!origin) return callback(null, true);
+      if (!origin) {
+        return callback(null, true);
+      }
 
+      // Check if origin is in allowed list
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        // Log for debugging
+        console.log('CORS: Origin not allowed:', origin);
+        console.log('CORS: Allowed origins:', allowedOrigins);
         callback(new Error(`Origin ${origin} not allowed by CORS`));
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   })
 );
 
