@@ -6,16 +6,8 @@ const {
   validatePreferences,
 } = require('../utils/preferences.validator');
 
-// Middleware to check if user is authenticated
-const requireAuth = (req, res, next) => {
-  if (req.session && req.session.userId) {
-    return next();
-  }
-  return res.status(401).json({ message: 'Unauthorized' });
-};
-
 // GET /api/user - Get all users
-router.get('/', requireAuth, async (req, res, next) => {
+router.get('/', verifyTokenMiddleware, async (req, res, next) => {
   try {
     const users = await userStore.getAll();
     res.status(200).json(users);
@@ -97,8 +89,7 @@ router.post('/preferences', verifyTokenMiddleware, async (req, res, next) => {
       preferences: savedPreferences,
     });
   } catch (error) {
-    console.error('Error saving preferences:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 });
 
@@ -146,13 +137,12 @@ router.put('/preferences', verifyTokenMiddleware, async (req, res, next) => {
       preferences: savedPreferences,
     });
   } catch (error) {
-    console.error('Error updating preferences:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 });
 
 // GET /api/user/:id - Get single user
-router.get('/:id', requireAuth, async (req, res, next) => {
+router.get('/:id', verifyTokenMiddleware, async (req, res, next) => {
   try {
     const { id } = req.params;
     const user = await userStore.findById(id);
@@ -169,7 +159,7 @@ router.get('/:id', requireAuth, async (req, res, next) => {
 });
 
 // PUT /api/user/:id - Update user (e.g., score)
-router.put('/:id', requireAuth, async (req, res, next) => {
+router.put('/:id', verifyTokenMiddleware, async (req, res, next) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -198,12 +188,13 @@ router.put('/:id', requireAuth, async (req, res, next) => {
 });
 
 // DELETE /api/user/:id - Delete user
-router.delete('/:id', requireAuth, async (req, res, next) => {
+router.delete('/:id', verifyTokenMiddleware, async (req, res, next) => {
   try {
     const { id } = req.params;
+    const userId = req.user.userId;
     
     // Prevent deleting yourself (optional safety check)
-    if (req.session.userId === id) {
+    if (userId === id) {
       return res.status(400).json({ message: 'Cannot delete your own account' });
     }
 

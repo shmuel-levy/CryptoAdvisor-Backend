@@ -62,7 +62,6 @@ async function generateInsight(userPreferences) {
       model: response.data.model || 'llama-3.2',
     };
   } catch (error) {
-    console.error('Error generating AI insight:', error.message);
 
     // Fallback insight if API fails
     const fallbackInsights = [
@@ -110,7 +109,6 @@ async function generateInsightHuggingFace(userPreferences) {
       model: 'huggingface',
     };
   } catch (error) {
-    console.error('Error with Hugging Face:', error.message);
     return generateInsight(userPreferences); // Fallback to OpenRouter
   }
 }

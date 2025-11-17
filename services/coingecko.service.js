@@ -70,7 +70,6 @@ async function getCoinPrices(coinIds) {
 
     return { coins };
   } catch (error) {
-    console.error('Error fetching CoinGecko data:', error.message);
     // Return empty data on error (graceful degradation)
     return { coins: [], error: 'Failed to fetch coin prices' };
   }
@@ -86,7 +85,6 @@ async function getTrendingCoins() {
     );
     return response.data;
   } catch (error) {
-    console.error('Error fetching trending coins:', error.message);
     return { coins: [] };
   }
 }

@@ -25,8 +25,7 @@ async function initializeDefaultUser() {
       console.log('Default admin user created: admin@example.com / admin123');
     }
   } catch (error) {
-    // Only log error, don't throw (allows server to start even if DB not connected)
-    console.error('Error initializing default user:', error.message);
+    // Silently fail - allows server to start even if DB not connected
   }
 }
 
@@ -41,7 +40,6 @@ const userStore = {
     try {
       return await User.findOne({ email: email.toLowerCase() });
     } catch (error) {
-      console.error('Error finding user by email:', error);
       return null;
     }
   },
@@ -55,7 +53,6 @@ const userStore = {
     try {
       return await User.findById(id);
     } catch (error) {
-      console.error('Error finding user by ID:', error);
       return null;
     }
   },
@@ -68,7 +65,6 @@ const userStore = {
     try {
       return await User.find({}).select('-password');
     } catch (error) {
-      console.error('Error getting all users:', error);
       return [];
     }
   },
@@ -96,7 +92,6 @@ const userStore = {
       const savedUser = await newUser.save();
       return savedUser;
     } catch (error) {
-      console.error('Error creating user:', error);
       throw error;
     }
   },
@@ -117,7 +112,6 @@ const userStore = {
       );
       return updatedUser;
     } catch (error) {
-      console.error('Error updating user:', error);
       return null;
     }
   },
@@ -145,7 +139,6 @@ const userStore = {
       );
       return updatedUser;
     } catch (error) {
-      console.error('Error updating preferences:', error);
       return null;
     }
   },
@@ -167,7 +160,6 @@ const userStore = {
       
       return user.preferences;
     } catch (error) {
-      console.error('Error getting preferences:', error);
       return null;
     }
   },
@@ -182,7 +174,6 @@ const userStore = {
       const result = await User.findByIdAndDelete(id);
       return !!result;
     } catch (error) {
-      console.error('Error deleting user:', error);
       return false;
     }
   },
@@ -197,7 +188,6 @@ const userStore = {
     try {
       return await user.comparePassword(password);
     } catch (error) {
-      console.error('Error verifying password:', error);
       return false;
     }
   },

@@ -34,13 +34,6 @@ router.get('/', verifyTokenMiddleware, async (req, res, next) => {
       contentTypes
     );
 
-    // Log if using fallback (for debugging)
-    if (newsData.error) {
-      console.log('Warning: Using fallback news data - CryptoPanic API may require API key');
-    } else {
-      console.log(`Successfully fetched ${newsData.count} news articles`);
-    }
-
     // Generate AI insight based on user preferences
     const aiInsightData = await aiService.generateInsight({
       interestedAssets,
@@ -48,16 +41,9 @@ router.get('/', verifyTokenMiddleware, async (req, res, next) => {
       contentTypes,
     });
 
-    // Log AI insight generation
-    if (aiInsightData.error) {
-      console.log('Warning: Using fallback AI insight');
-    } else {
-      console.log(`Successfully generated AI insight using ${aiInsightData.model}`);
-    }
-
     // Get random crypto meme (personalized by user's interested assets)
-    const memeData = memeService.getRandomMeme(interestedAssets);
-    console.log(`Fetched meme: ${memeData.title}`);
+    const backendBaseUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3030}`;
+    const memeData = memeService.getRandomMeme(interestedAssets, backendBaseUrl);
 
     // Build complete dashboard data with all sections
     const dashboardData = {
