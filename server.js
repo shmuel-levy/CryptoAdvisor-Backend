@@ -5,7 +5,6 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
-const onboardingRoutes = require('./routes/onboarding.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const feedbackRoutes = require('./routes/feedback.routes');
 
@@ -50,7 +49,6 @@ app.use(
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
-app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/feedback', feedbackRoutes);
 
@@ -72,10 +70,11 @@ app.get('/', (req, res) => {
         get: 'GET /api/user/:id',
         update: 'PUT /api/user/:id',
         delete: 'DELETE /api/user/:id',
-        preferences: 'GET /api/user/preferences',
-      },
-      onboarding: {
-        save: 'POST /api/onboarding',
+        preferences: {
+          get: 'GET /api/user/preferences',
+          save: 'POST /api/user/preferences',
+          update: 'PUT /api/user/preferences',
+        },
       },
       dashboard: {
         get: 'GET /api/dashboard',
