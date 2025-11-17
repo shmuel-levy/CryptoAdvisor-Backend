@@ -40,8 +40,13 @@ async function getCryptoNews(currencies = [], contentTypes = []) {
     const apiKey = process.env.CRYPTOPANIC_API_KEY;
     
     if (!apiKey) {
-      console.error('CRYPTOPANIC_API_KEY not found in environment variables');
-      throw new Error('CryptoPanic API key is required');
+      console.log('CRYPTOPANIC_API_KEY not found - using fallback news');
+      const fallbackNews = generateFallbackNews(currencies);
+      return {
+        news: fallbackNews,
+        count: fallbackNews.length,
+        error: 'Using fallback news data - CryptoPanic API key not configured',
+      };
     }
 
     const params = {
@@ -82,6 +87,13 @@ async function getCryptoNews(currencies = [], contentTypes = []) {
     if (error.response) {
       console.error('API Error Status:', error.response.status);
       console.error('API Error Data:', error.response.data);
+      
+      // Check if it's a rate limit or API key issue
+      if (error.response.status === 401 || error.response.status === 403) {
+        console.log('CryptoPanic API key issue - using fallback news');
+      } else if (error.response.status === 429) {
+        console.log('CryptoPanic API rate limit exceeded - using fallback news');
+      }
     }
     
     // Return realistic fallback news based on user's currencies
@@ -96,68 +108,199 @@ async function getCryptoNews(currencies = [], contentTypes = []) {
 
 /**
  * Generate realistic fallback news articles
- * Used when CryptoPanic API is unavailable
+ * Used when CryptoPanic API is unavailable (rate limit, API key issue, etc.)
  */
 function generateFallbackNews(currencies = ['BTC', 'ETH']) {
+  // Comprehensive news templates for each currency
   const newsTemplates = {
     BTC: [
       {
         title: 'Bitcoin Price Analysis: Market Shows Strong Support Levels',
         source: 'CryptoNews',
-        url: 'https://cryptopanic.com',
       },
       {
         title: 'Institutional Investors Continue Bitcoin Accumulation',
         source: 'CoinDesk',
-        url: 'https://cryptopanic.com',
+      },
+      {
+        title: 'Bitcoin Hash Rate Reaches All-Time High',
+        source: 'Blockchain.com',
+      },
+      {
+        title: 'Major Corporations Add Bitcoin to Treasury Reserves',
+        source: 'Forbes Crypto',
       },
     ],
     ETH: [
       {
         title: 'Ethereum Network Activity Reaches New Highs',
         source: 'Ethereum Foundation',
-        url: 'https://cryptopanic.com',
       },
       {
         title: 'DeFi Protocols on Ethereum See Increased TVL',
         source: 'DeFi Pulse',
-        url: 'https://cryptopanic.com',
+      },
+      {
+        title: 'Ethereum Layer 2 Solutions Gain Traction',
+        source: 'Ethereum News',
+      },
+      {
+        title: 'NFT Market Shows Recovery Signs on Ethereum',
+        source: 'NFT Gators',
       },
     ],
     SOL: [
       {
         title: 'Solana Ecosystem Expands with New DeFi Projects',
         source: 'Solana News',
-        url: 'https://cryptopanic.com',
+      },
+      {
+        title: 'Solana Network Performance Improvements Announced',
+        source: 'Solana Foundation',
+      },
+      {
+        title: 'Major DEX Launches on Solana Blockchain',
+        source: 'DeFi News',
       },
     ],
     ADA: [
       {
         title: 'Cardano Development Updates: Smart Contract Improvements',
         source: 'Cardano Community',
-        url: 'https://cryptopanic.com',
+      },
+      {
+        title: 'Cardano Staking Rewards Reach New Milestone',
+        source: 'Cardano News',
+      },
+    ],
+    DOT: [
+      {
+        title: 'Polkadot Parachain Auctions See High Participation',
+        source: 'Polkadot Network',
+      },
+      {
+        title: 'Cross-Chain Bridges Expand on Polkadot',
+        source: 'Crypto Briefing',
+      },
+    ],
+    MATIC: [
+      {
+        title: 'Polygon Network Sees Record Transaction Volume',
+        source: 'Polygon News',
+      },
+      {
+        title: 'Major Gaming Projects Migrate to Polygon',
+        source: 'GameFi News',
+      },
+    ],
+    AVAX: [
+      {
+        title: 'Avalanche Subnets Enable Custom Blockchain Solutions',
+        source: 'Avalanche News',
+      },
+      {
+        title: 'Avalanche DeFi Ecosystem Continues Growth',
+        source: 'DeFi Times',
+      },
+    ],
+    BNB: [
+      {
+        title: 'BNB Chain Sees Increased Developer Activity',
+        source: 'BNB Chain News',
+      },
+      {
+        title: 'Binance Smart Chain Updates Improve Performance',
+        source: 'Binance Blog',
+      },
+    ],
+    XRP: [
+      {
+        title: 'Ripple Legal Developments Impact XRP Market',
+        source: 'Crypto Legal',
+      },
+      {
+        title: 'XRP Payment Solutions Expand Globally',
+        source: 'Ripple News',
       },
     ],
   };
 
+  // General crypto news (used when currency not in templates)
+  const generalNews = [
+    {
+      title: 'Cryptocurrency Market Shows Bullish Momentum',
+      source: 'Market Watch',
+    },
+    {
+      title: 'Regulatory Clarity Improves for Crypto Industry',
+      source: 'Crypto Regulation',
+    },
+    {
+      title: 'Institutional Adoption of Crypto Accelerates',
+      source: 'Institutional Crypto',
+    },
+    {
+      title: 'DeFi Total Value Locked Reaches New Heights',
+      source: 'DeFi Analytics',
+    },
+    {
+      title: 'Crypto Exchanges Report Record Trading Volumes',
+      source: 'Exchange News',
+    },
+  ];
+
   const articles = [];
-  currencies.forEach((currency, index) => {
-    const templates = newsTemplates[currency] || newsTemplates['BTC'];
-    templates.forEach((template, templateIndex) => {
-      articles.push({
-        id: `fallback-${currency}-${index}-${templateIndex}`,
-        title: template.title,
-        url: template.url,
-        source: template.source,
-        publishedAt: new Date(Date.now() - index * 3600000).toISOString(), // Staggered times
-        votes: Math.floor(Math.random() * 20),
-        currencies: [currency],
-      });
-    });
+  const usedTitles = new Set(); // Prevent duplicates
+
+  // Generate news for each currency
+  currencies.forEach((currency, currencyIndex) => {
+    const templates = newsTemplates[currency.toUpperCase()] || generalNews;
+    
+    // Take 2-3 articles per currency
+    const articlesPerCurrency = Math.min(3, templates.length);
+    
+    for (let i = 0; i < articlesPerCurrency && articles.length < 10; i++) {
+      const template = templates[i % templates.length];
+      const uniqueTitle = `${template.title} (${currency})`;
+      
+      if (!usedTitles.has(uniqueTitle)) {
+        usedTitles.add(uniqueTitle);
+        articles.push({
+          id: `fallback-${currency}-${Date.now()}-${i}`,
+          title: template.title,
+          url: 'https://cryptopanic.com',
+          source: template.source,
+          publishedAt: new Date(Date.now() - (currencyIndex * 2 + i) * 3600000).toISOString(),
+          votes: Math.floor(Math.random() * 50) + 5,
+          currencies: [currency],
+        });
+      }
+    }
   });
 
-  // Limit to 10 articles
-  return articles.slice(0, 10);
+  // Fill remaining slots with general news if needed
+  if (articles.length < 10) {
+    generalNews.forEach((template, index) => {
+      if (articles.length >= 10) return;
+      if (!usedTitles.has(template.title)) {
+        usedTitles.add(template.title);
+        articles.push({
+          id: `fallback-general-${Date.now()}-${index}`,
+          title: template.title,
+          url: 'https://cryptopanic.com',
+          source: template.source,
+          publishedAt: new Date(Date.now() - (articles.length + 1) * 3600000).toISOString(),
+          votes: Math.floor(Math.random() * 50) + 5,
+          currencies: currencies.length > 0 ? currencies : ['BTC', 'ETH'],
+        });
+      }
+    });
+  }
+
+  // Sort by published date (newest first) and limit to 10
+  return articles
+    .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+    .slice(0, 10);
 }
 
 module.exports = {
