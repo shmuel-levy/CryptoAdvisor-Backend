@@ -40,7 +40,6 @@ async function getCryptoNews(currencies = [], contentTypes = []) {
     const apiKey = process.env.CRYPTOPANIC_API_KEY;
     
     if (!apiKey) {
-      console.log('CRYPTOPANIC_API_KEY not found - using fallback news');
       const fallbackNews = generateFallbackNews(currencies);
       return {
         news: fallbackNews,
@@ -63,12 +62,21 @@ async function getCryptoNews(currencies = [], contentTypes = []) {
 
     // Check if response has data
     if (!response.data || !response.data.results) {
-      console.error('CryptoPanic API returned unexpected format:', response.data);
       throw new Error('Invalid API response format');
     }
 
     // Transform and filter news based on content types
     let news = response.data.results || [];
+
+    // If no news articles returned, use fallback
+    if (!news || news.length === 0) {
+      const fallbackNews = generateFallbackNews(currencies);
+      return {
+        news: fallbackNews,
+        count: fallbackNews.length,
+        error: 'Using fallback news data - CryptoPanic API returned no results',
+      };
+    }
 
     // Limit to 10 most recent articles
     news = news.slice(0, 10).map((article) => ({
@@ -83,19 +91,6 @@ async function getCryptoNews(currencies = [], contentTypes = []) {
 
     return { news, count: news.length };
   } catch (error) {
-    console.error('Error fetching CryptoPanic news:', error.message);
-    if (error.response) {
-      console.error('API Error Status:', error.response.status);
-      console.error('API Error Data:', error.response.data);
-      
-      // Check if it's a rate limit or API key issue
-      if (error.response.status === 401 || error.response.status === 403) {
-        console.log('CryptoPanic API key issue - using fallback news');
-      } else if (error.response.status === 429) {
-        console.log('CryptoPanic API rate limit exceeded - using fallback news');
-      }
-    }
-    
     // Return realistic fallback news based on user's currencies
     const fallbackNews = generateFallbackNews(currencies);
     return {
