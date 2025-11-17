@@ -29,11 +29,15 @@ async function connectDB() {
 
     // Handle connection events
     mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('MongoDB connection error:', err);
+      }
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.log('MongoDB disconnected');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('MongoDB disconnected');
+      }
     });
 
     // Graceful shutdown
