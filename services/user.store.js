@@ -76,7 +76,7 @@ const userStore = {
 
     const { password, ...rest } = updates;
     const updatedUser = { ...users[userIndex], ...rest };
-    
+
     if (password) {
       // Hash new password if provided
       bcrypt.hash(password, 10).then(hashed => {
@@ -86,6 +86,27 @@ const userStore = {
 
     users[userIndex] = updatedUser;
     return updatedUser;
+  },
+
+  // Update user preferences
+  updatePreferences(userId, preferences) {
+    const userIndex = users.findIndex(user => user._id === userId);
+    if (userIndex === -1) return null;
+
+    users[userIndex].preferences = {
+      ...preferences,
+      completedOnboarding: true,
+      updatedAt: new Date().toISOString(),
+    };
+
+    return users[userIndex];
+  },
+
+  // Get user preferences
+  getPreferences(userId) {
+    const user = this.findById(userId);
+    if (!user) return null;
+    return user.preferences || null;
   },
 
   // Delete user
