@@ -13,79 +13,81 @@
  */
 
 // Curated crypto meme collection
-// Using Unsplash CDN for reliable production-ready images
-// 
-// To replace with actual crypto memes later:
-// 1. Host your own images on a CDN (Cloudinary, AWS S3, etc.)
-// 2. Use Reddit API to fetch from r/cryptomemes
-// 3. Use Imgur direct image links (i.imgur.com/...)
-// 4. Use a meme API service
-//
-// Current URLs use Unsplash - reliable, fast, works everywhere (including Render/Netlify)
+// Using local images from /imgs folder
+// Images are served via Express static middleware at /images route
+
 const CRYPTO_MEMES = [
   {
     id: 'meme-1',
-    url: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=600&h=400&fit=crop',
-    title: 'HODL Strong',
-    description: 'Diamond hands never fold',
+    filename: 'bitcoin-memes-2024.png',
+    url: '/images/bitcoin-memes-2024.png',
+    title: 'Bitcoin Memes 2024',
+    description: 'Classic Bitcoin humor',
     source: 'CryptoAdvisor',
-    tags: ['HODL', 'BTC'],
+    tags: ['BTC', 'HODL', 'meme'],
   },
   {
     id: 'meme-2',
-    url: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=600&h=400&fit=crop',
-    title: 'To The Moon',
-    description: 'When your portfolio goes up',
+    filename: 'should I sell bitcoin.png',
+    url: '/images/should I sell bitcoin.png',
+    title: 'Should I Sell Bitcoin?',
+    description: 'The eternal question',
     source: 'CryptoAdvisor',
-    tags: ['moon', 'bullish'],
+    tags: ['BTC', 'HODL', 'dip'],
   },
   {
     id: 'meme-3',
-    url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&h=400&fit=crop',
-    title: 'When Bitcoin Dips',
-    description: 'Stay calm and HODL',
+    filename: 'alt coins are pumping.png',
+    url: '/images/alt coins are pumping.png',
+    title: 'Alt Coins Are Pumping',
+    description: 'When alts go up',
     source: 'CryptoAdvisor',
-    tags: ['dip', 'BTC', 'HODL'],
+    tags: ['altcoins', 'bullish', 'pump'],
   },
   {
     id: 'meme-4',
-    url: 'https://images.unsplash.com/photo-1620321023374-d1a68fbc720e?w=600&h=400&fit=crop',
-    title: 'Diamond Hands',
-    description: 'Never selling',
+    filename: 'john-wick-vs-john-weak-crypto-meme.png',
+    url: '/images/john-wick-vs-john-weak-crypto-meme.png',
+    title: 'John Wick vs John Weak',
+    description: 'Diamond hands vs paper hands',
     source: 'CryptoAdvisor',
-    tags: ['diamond-hands', 'HODL'],
+    tags: ['diamond-hands', 'HODL', 'meme'],
   },
   {
     id: 'meme-5',
-    url: 'https://images.unsplash.com/photo-1639322537228-f710d846310a?w=600&h=400&fit=crop',
-    title: 'Crypto Life',
-    description: 'Living the crypto dream',
+    filename: 'remember all of that money we saved for the house.jpeg',
+    url: '/images/remember all of that money we saved for the house.jpeg',
+    title: 'Remember All That Money',
+    description: 'Crypto life decisions',
     source: 'CryptoAdvisor',
-    tags: ['lifestyle', 'crypto'],
+    tags: ['lifestyle', 'crypto', 'decisions'],
   },
   {
     id: 'meme-6',
-    url: 'https://images.unsplash.com/photo-1621416893542-0e9d0ad80c49?w=600&h=400&fit=crop',
-    title: 'Buy The Dip',
-    description: 'Best time to accumulate',
+    filename: 'trading crypto.jpg',
+    url: '/images/trading crypto.jpg',
+    title: 'Trading Crypto',
+    description: 'The trading life',
     source: 'CryptoAdvisor',
-    tags: ['buy', 'dip', 'accumulate'],
+    tags: ['trading', 'crypto', 'day-trader'],
   },
   {
     id: 'meme-7',
-    url: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=600&h=400&fit=crop&auto=format',
-    title: 'When You See Green',
-    description: 'Portfolio in the green',
+    filename: 'unnamed.png',
+    url: '/images/unnamed.png',
+    title: 'Crypto Meme',
+    description: 'Random crypto humor',
     source: 'CryptoAdvisor',
-    tags: ['green', 'profit', 'bullish'],
+    tags: ['meme', 'crypto', 'fun'],
   },
   {
     id: 'meme-8',
-    url: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?w=600&h=400&fit=crop&auto=format',
-    title: 'ETH To The Moon',
-    description: 'Ethereum going up',
+    filename: 'unnamed (1).png',
+    url: '/images/unnamed (1).png',
+    title: 'Crypto Meme 2',
+    description: 'More crypto humor',
     source: 'CryptoAdvisor',
-    tags: ['ETH', 'moon', 'ethereum'],
+    tags: ['meme', 'crypto', 'fun'],
   },
 ];
 
@@ -94,9 +96,10 @@ const CRYPTO_MEMES = [
  * Returns a different meme each time for variety
  * 
  * @param {string[]} userInterestedAssets - Optional: filter memes by user's coins
+ * @param {string} baseUrl - Optional: base URL for image paths (default: relative path)
  * @returns {Object} Random meme object with url, title, and metadata
  */
-function getRandomMeme(userInterestedAssets = []) {
+function getRandomMeme(userInterestedAssets = [], baseUrl = '') {
   // Filter memes by user's interested assets if provided
   let availableMemes = CRYPTO_MEMES;
   
@@ -117,8 +120,13 @@ function getRandomMeme(userInterestedAssets = []) {
   const randomIndex = Math.floor(Math.random() * availableMemes.length);
   const selectedMeme = availableMemes[randomIndex];
   
+  // Build full URL if baseUrl provided, otherwise use relative path
+  const imageUrl = baseUrl 
+    ? `${baseUrl}${selectedMeme.url}` 
+    : selectedMeme.url;
+  
   return {
-    url: selectedMeme.url,
+    url: imageUrl,
     title: selectedMeme.title,
     description: selectedMeme.description,
     source: selectedMeme.source,

@@ -1,12 +1,5 @@
 require('dotenv').config();
 
-// Debug: Check if API key is loaded (development only)
-if (process.env.NODE_ENV !== 'production') {
-  console.log('Environment check:');
-  console.log('  CRYPTOPANIC_API_KEY:', process.env.CRYPTOPANIC_API_KEY ? 'Loaded (' + process.env.CRYPTOPANIC_API_KEY.substring(0, 10) + '...)' : 'NOT FOUND');
-  console.log('  MONGODB_URI:', process.env.MONGODB_URI ? 'Loaded' : 'NOT FOUND');
-}
-
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
@@ -25,6 +18,9 @@ const PORT = process.env.PORT || 3030;
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static images from imgs folder
+app.use('/images', express.static('imgs'));
 
 // CORS configuration - important for withCredentials: true
 app.use(
@@ -92,6 +88,7 @@ app.get('/', (req, res) => {
       feedback: {
         save: 'POST /api/feedback',
         list: 'GET /api/feedback',
+        stats: 'GET /api/feedback/stats',
       },
     },
   });
@@ -104,9 +101,17 @@ app.get('/api/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(err.status || 500).json({
-    message: err.message || 'Something went wrong',
+  const status = err.status || 500;
+  const message = err.message || 'Something went wrong';
+  
+  // Log errors in development, but not in production (security)
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Error:', err);
+  }
+  
+  res.status(status).json({
+    message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 });
 
