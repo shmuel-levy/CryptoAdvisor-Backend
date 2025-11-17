@@ -16,18 +16,24 @@ router.post('/signup', async (req, res, next) => {
   try {
     const { email, password, firstName, lastName, profileImg, role } = req.body;
 
+    // Debug: Log incoming request
+    console.log('Signup request:', { email, hasPassword: !!password, firstName, lastName });
+
     // Validation
     if (!email || !password) {
+      console.log('Signup validation failed: Missing email or password');
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
     if (!firstName || !lastName) {
+      console.log('Signup validation failed: Missing firstName or lastName');
       return res.status(400).json({ message: 'First name and last name are required' });
     }
 
     // Check if user already exists
     const existingUser = userStore.findByEmail(email);
     if (existingUser) {
+      console.log('Signup failed: User already exists', email);
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
@@ -56,7 +62,8 @@ router.post('/signup', async (req, res, next) => {
     res.status(200).json({
       token,
       user: {
-        id: sanitizedUser._id,
+        _id: sanitizedUser._id, // Frontend expects _id
+        id: sanitizedUser._id, // Also include id for compatibility
         email: sanitizedUser.email,
         name: `${sanitizedUser.firstName} ${sanitizedUser.lastName}`,
         firstName: sanitizedUser.firstName,
@@ -78,22 +85,30 @@ router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
+    // Debug: Log incoming request
+    console.log('Login request:', { email, hasPassword: !!password });
+
     // Validation
     if (!email || !password) {
+      console.log('Login validation failed: Missing email or password');
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
     // Find user
     const user = userStore.findByEmail(email);
     if (!user) {
+      console.log('Login failed: User not found', email);
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     // Verify password
     const isValidPassword = await userStore.verifyPassword(user, password);
     if (!isValidPassword) {
+      console.log('Login failed: Invalid password for', email);
       return res.status(401).json({ message: 'Invalid email or password' });
     }
+
+    console.log('Login successful for', email);
 
     // Set session (for backward compatibility)
     req.session.userId = user._id;
@@ -110,7 +125,8 @@ router.post('/login', async (req, res, next) => {
     res.status(200).json({
       token,
       user: {
-        id: sanitizedUser._id,
+        _id: sanitizedUser._id, // Frontend expects _id
+        id: sanitizedUser._id, // Also include id for compatibility
         email: sanitizedUser.email,
         name: `${sanitizedUser.firstName} ${sanitizedUser.lastName}`,
         firstName: sanitizedUser.firstName,
