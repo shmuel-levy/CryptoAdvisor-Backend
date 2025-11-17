@@ -114,7 +114,7 @@ userSchema.methods.toJSON = function () {
 };
 
 // Create indexes for better query performance
-userSchema.index({ email: 1 });
+// Note: email index is already created by unique: true above
 userSchema.index({ createdAt: -1 });
 
 const User = mongoose.model('User', userSchema);

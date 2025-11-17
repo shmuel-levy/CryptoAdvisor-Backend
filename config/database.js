@@ -15,13 +15,8 @@ async function connectDB() {
       throw new Error('MONGODB_URI is not defined in environment variables');
     }
 
-    const options = {
-      // These options are recommended for MongoDB Atlas
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    };
-
-    await mongoose.connect(mongoURI, options);
+    // No options needed - Mongoose 6+ handles this automatically
+    await mongoose.connect(mongoURI);
 
     console.log('MongoDB connected successfully');
     console.log(`Database: ${mongoose.connection.name}`);
