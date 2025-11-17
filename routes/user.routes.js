@@ -15,9 +15,9 @@ const requireAuth = (req, res, next) => {
 };
 
 // GET /api/user - Get all users
-router.get('/', requireAuth, (req, res, next) => {
+router.get('/', requireAuth, async (req, res, next) => {
   try {
-    const users = userStore.getAll();
+    const users = await userStore.getAll();
     res.status(200).json(users);
   } catch (error) {
     next(error);
@@ -25,18 +25,18 @@ router.get('/', requireAuth, (req, res, next) => {
 });
 
 // GET /api/user/preferences - Get user preferences
-router.get('/preferences', verifyTokenMiddleware, (req, res, next) => {
+router.get('/preferences', verifyTokenMiddleware, async (req, res, next) => {
   try {
     const userId = req.user.userId;
 
     // Get user to verify they exist
-    const user = userStore.findById(userId);
+    const user = await userStore.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     // Get preferences from user object
-    const preferences = userStore.getPreferences(userId);
+    const preferences = await userStore.getPreferences(userId);
 
     if (!preferences) {
       return res.status(200).json({
@@ -54,13 +54,13 @@ router.get('/preferences', verifyTokenMiddleware, (req, res, next) => {
 });
 
 // POST /api/user/preferences - Save user preferences
-router.post('/preferences', verifyTokenMiddleware, (req, res, next) => {
+router.post('/preferences', verifyTokenMiddleware, async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const { interestedAssets, investorType, contentTypes } = req.body;
 
     // Verify user exists
-    const user = userStore.findById(userId);
+    const user = await userStore.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -85,7 +85,10 @@ router.post('/preferences', verifyTokenMiddleware, (req, res, next) => {
       contentTypes,
     };
 
-    const updatedUser = userStore.updatePreferences(userId, preferencesData);
+    const updatedUser = await userStore.updatePreferences(userId, preferencesData);
+    if (!updatedUser) {
+      return res.status(500).json({ message: 'Failed to save preferences' });
+    }
     const savedPreferences = updatedUser.preferences;
 
     res.status(200).json({
@@ -100,13 +103,13 @@ router.post('/preferences', verifyTokenMiddleware, (req, res, next) => {
 });
 
 // PUT /api/user/preferences - Update user preferences
-router.put('/preferences', verifyTokenMiddleware, (req, res, next) => {
+router.put('/preferences', verifyTokenMiddleware, async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const { interestedAssets, investorType, contentTypes } = req.body;
 
     // Verify user exists
-    const user = userStore.findById(userId);
+    const user = await userStore.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -131,7 +134,10 @@ router.put('/preferences', verifyTokenMiddleware, (req, res, next) => {
       contentTypes,
     };
 
-    const updatedUser = userStore.updatePreferences(userId, preferencesData);
+    const updatedUser = await userStore.updatePreferences(userId, preferencesData);
+    if (!updatedUser) {
+      return res.status(500).json({ message: 'Failed to update preferences' });
+    }
     const savedPreferences = updatedUser.preferences;
 
     res.status(200).json({
@@ -146,10 +152,10 @@ router.put('/preferences', verifyTokenMiddleware, (req, res, next) => {
 });
 
 // GET /api/user/:id - Get single user
-router.get('/:id', requireAuth, (req, res, next) => {
+router.get('/:id', requireAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
-    const user = userStore.findById(id);
+    const user = await userStore.findById(id);
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -163,7 +169,7 @@ router.get('/:id', requireAuth, (req, res, next) => {
 });
 
 // PUT /api/user/:id - Update user (e.g., score)
-router.put('/:id', requireAuth, (req, res, next) => {
+router.put('/:id', requireAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -178,7 +184,7 @@ router.put('/:id', requireAuth, (req, res, next) => {
       }
     }
 
-    const updatedUser = userStore.update(id, filteredUpdates);
+    const updatedUser = await userStore.update(id, filteredUpdates);
     
     if (!updatedUser) {
       return res.status(404).json({ message: 'User not found' });
@@ -192,7 +198,7 @@ router.put('/:id', requireAuth, (req, res, next) => {
 });
 
 // DELETE /api/user/:id - Delete user
-router.delete('/:id', requireAuth, (req, res, next) => {
+router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
     
@@ -201,7 +207,7 @@ router.delete('/:id', requireAuth, (req, res, next) => {
       return res.status(400).json({ message: 'Cannot delete your own account' });
     }
 
-    const deleted = userStore.delete(id);
+    const deleted = await userStore.delete(id);
     
     if (!deleted) {
       return res.status(404).json({ message: 'User not found' });

@@ -5,6 +5,7 @@ const userStore = require('../services/user.store');
 const coingeckoService = require('../services/coingecko.service');
 const cryptopanicService = require('../services/cryptopanic.service');
 const aiService = require('../services/ai.service');
+const memeService = require('../services/meme.service');
 
 // GET /api/dashboard - Get dashboard data
 router.get('/', verifyTokenMiddleware, async (req, res, next) => {
@@ -12,13 +13,13 @@ router.get('/', verifyTokenMiddleware, async (req, res, next) => {
     const userId = req.user.userId;
 
     // Get user data
-    const user = userStore.findById(userId);
+    const user = await userStore.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     // Get user preferences to personalize dashboard
-    const preferences = userStore.getPreferences(userId);
+    const preferences = await userStore.getPreferences(userId);
     const interestedAssets = preferences?.interestedAssets || ['BTC', 'ETH'];
 
     // Fetch coin prices based on user's interested assets
@@ -54,7 +55,11 @@ router.get('/', verifyTokenMiddleware, async (req, res, next) => {
       console.log(`Successfully generated AI insight using ${aiInsightData.model}`);
     }
 
-    // Build dashboard data with real coin prices, news, and AI insight
+    // Get random crypto meme (personalized by user's interested assets)
+    const memeData = memeService.getRandomMeme(interestedAssets);
+    console.log(`Fetched meme: ${memeData.title}`);
+
+    // Build complete dashboard data with all sections
     const dashboardData = {
       user: {
         id: user._id,
@@ -78,8 +83,13 @@ router.get('/', verifyTokenMiddleware, async (req, res, next) => {
         generatedAt: aiInsightData.generatedAt,
         model: aiInsightData.model,
       },
-      // Placeholder for other sections (will add in next phases)
-      meme: { url: '', title: '' },
+      meme: {
+        url: memeData.url,
+        title: memeData.title,
+        description: memeData.description,
+        source: memeData.source,
+        fetchedAt: memeData.fetchedAt,
+      },
     };
 
     res.status(200).json(dashboardData);

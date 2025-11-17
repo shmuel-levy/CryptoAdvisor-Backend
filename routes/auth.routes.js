@@ -31,13 +31,14 @@ router.post('/signup', async (req, res, next) => {
     }
 
     // Check if user already exists
-    const existingUser = userStore.findByEmail(email);
+    const existingUser = await userStore.findByEmail(email);
     if (existingUser) {
       console.log('Signup failed: User already exists', email);
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
     // Create new user
+    console.log('Creating user in MongoDB...');
     const newUser = await userStore.create({
       email,
       password,
@@ -46,6 +47,8 @@ router.post('/signup', async (req, res, next) => {
       profileImg: profileImg || '',
       role: role || 'user'
     });
+
+    console.log('User created successfully:', { id: newUser._id, email: newUser.email });
 
     // Set session (for backward compatibility)
     req.session.userId = newUser._id;
@@ -76,6 +79,11 @@ router.post('/signup', async (req, res, next) => {
       },
     });
   } catch (error) {
+    console.error('Signup error:', error);
+    // If it's a MongoDB duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'User with this email already exists' });
+    }
     next(error);
   }
 });
@@ -95,7 +103,7 @@ router.post('/login', async (req, res, next) => {
     }
 
     // Find user
-    const user = userStore.findByEmail(email);
+    const user = await userStore.findByEmail(email);
     if (!user) {
       console.log('Login failed: User not found', email);
       return res.status(401).json({ message: 'Invalid email or password' });
@@ -159,9 +167,9 @@ router.post('/logout', (req, res, next) => {
 });
 
 // GET /api/auth/me - Get current user (optional, useful for checking session)
-router.get('/me', requireAuth, (req, res, next) => {
+router.get('/me', requireAuth, async (req, res, next) => {
   try {
-    const user = userStore.findById(req.session.userId);
+    const user = await userStore.findById(req.session.userId);
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
