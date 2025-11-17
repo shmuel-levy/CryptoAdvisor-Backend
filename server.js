@@ -4,12 +4,15 @@ require('dotenv').config();
 if (process.env.NODE_ENV !== 'production') {
   console.log('Environment check:');
   console.log('  CRYPTOPANIC_API_KEY:', process.env.CRYPTOPANIC_API_KEY ? 'Loaded (' + process.env.CRYPTOPANIC_API_KEY.substring(0, 10) + '...)' : 'NOT FOUND');
+  console.log('  MONGODB_URI:', process.env.MONGODB_URI ? 'Loaded' : 'NOT FOUND');
 }
 
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
+const connectDB = require('./config/database');
+const userStore = require('./services/user.store');
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
@@ -112,19 +115,37 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-app
-  .listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`API available at http://localhost:${PORT}/api`);
-  })
-  .on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.error(`Port ${PORT} is already in use.`);
-      console.error(`Please stop the other process or use a different port.`);
-      console.error(`To find the process: netstat -ano | findstr :${PORT}`);
-      console.error(`To kill it: taskkill /PID <PID> /F`);
-    } else {
-      console.error('Server error:', err);
-    }
+// Start server after MongoDB connection
+async function startServer() {
+  try {
+    // Connect to MongoDB
+    await connectDB();
+
+    // Initialize default admin user (only if no users exist)
+    await userStore.initializeDefaultUser();
+
+    // Start Express server
+    app
+      .listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+        console.log(`API available at http://localhost:${PORT}/api`);
+      })
+      .on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          console.error(`Port ${PORT} is already in use.`);
+          console.error(`Please stop the other process or use a different port.`);
+          console.error(`To find the process: netstat -ano | findstr :${PORT}`);
+          console.error(`To kill it: taskkill /PID <PID> /F`);
+        } else {
+          console.error('Server error:', err);
+        }
+        process.exit(1);
+      });
+  } catch (error) {
+    console.error('Failed to start server:', error);
     process.exit(1);
-  });
+  }
+}
+
+// Start the server
+startServer();
