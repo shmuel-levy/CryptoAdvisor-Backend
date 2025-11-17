@@ -1,4 +1,11 @@
 require('dotenv').config();
+
+// Debug: Check if API key is loaded (development only)
+if (process.env.NODE_ENV !== 'production') {
+  console.log('Environment check:');
+  console.log('  CRYPTOPANIC_API_KEY:', process.env.CRYPTOPANIC_API_KEY ? 'Loaded (' + process.env.CRYPTOPANIC_API_KEY.substring(0, 10) + '...)' : 'NOT FOUND');
+}
+
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
