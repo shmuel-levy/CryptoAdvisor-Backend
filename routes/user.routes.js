@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const userStore = require('../services/user.store');
 const { verifyTokenMiddleware } = require('../middleware/auth.middleware');
+const {
+  validatePreferences,
+} = require('../utils/preferences.validator');
 
 // Middleware to check if user is authenticated
 const requireAuth = (req, res, next) => {
@@ -10,9 +13,6 @@ const requireAuth = (req, res, next) => {
   }
   return res.status(401).json({ message: 'Unauthorized' });
 };
-
-// In-memory storage for user preferences (replace with database in production)
-const userPreferences = {};
 
 // GET /api/user - Get all users
 router.get('/', requireAuth, (req, res, next) => {
@@ -24,21 +24,124 @@ router.get('/', requireAuth, (req, res, next) => {
   }
 });
 
-// GET /api/user/preferences - Get user onboarding data
+// GET /api/user/preferences - Get user preferences
 router.get('/preferences', verifyTokenMiddleware, (req, res, next) => {
   try {
     const userId = req.user.userId;
 
-    const preferences = userPreferences[userId] || {
-      riskTolerance: null,
-      investmentGoals: [],
-      experienceLevel: null,
-      selectedCoins: [],
-    };
+    // Get user to verify they exist
+    const user = userStore.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-    res.status(200).json(preferences);
+    // Get preferences from user object
+    const preferences = userStore.getPreferences(userId);
+
+    if (!preferences) {
+      return res.status(200).json({
+        preferences: null,
+        completedOnboarding: false,
+      });
+    }
+
+    res.status(200).json({
+      preferences,
+    });
   } catch (error) {
     next(error);
+  }
+});
+
+// POST /api/user/preferences - Save user preferences
+router.post('/preferences', verifyTokenMiddleware, (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const { interestedAssets, investorType, contentTypes } = req.body;
+
+    // Verify user exists
+    const user = userStore.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Validate preferences
+    const validation = validatePreferences({
+      interestedAssets,
+      investorType,
+      contentTypes,
+    });
+
+    if (!validation.isValid) {
+      return res.status(400).json({
+        message: `Validation error: ${validation.errors.join(', ')}`,
+      });
+    }
+
+    // Save preferences
+    const preferencesData = {
+      interestedAssets,
+      investorType,
+      contentTypes,
+    };
+
+    const updatedUser = userStore.updatePreferences(userId, preferencesData);
+    const savedPreferences = updatedUser.preferences;
+
+    res.status(200).json({
+      success: true,
+      message: 'Preferences saved successfully',
+      preferences: savedPreferences,
+    });
+  } catch (error) {
+    console.error('Error saving preferences:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// PUT /api/user/preferences - Update user preferences
+router.put('/preferences', verifyTokenMiddleware, (req, res, next) => {
+  try {
+    const userId = req.user.userId;
+    const { interestedAssets, investorType, contentTypes } = req.body;
+
+    // Verify user exists
+    const user = userStore.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Validate preferences
+    const validation = validatePreferences({
+      interestedAssets,
+      investorType,
+      contentTypes,
+    });
+
+    if (!validation.isValid) {
+      return res.status(400).json({
+        message: `Validation error: ${validation.errors.join(', ')}`,
+      });
+    }
+
+    // Update preferences
+    const preferencesData = {
+      interestedAssets,
+      investorType,
+      contentTypes,
+    };
+
+    const updatedUser = userStore.updatePreferences(userId, preferencesData);
+    const savedPreferences = updatedUser.preferences;
+
+    res.status(200).json({
+      success: true,
+      message: 'Preferences updated successfully',
+      preferences: savedPreferences,
+    });
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
