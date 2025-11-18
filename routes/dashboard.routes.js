@@ -27,6 +27,15 @@ router.get('/', verifyTokenMiddleware, async (req, res, next) => {
       interestedAssets
     );
 
+    // Log coin prices status (for debugging)
+    if (coinPricesData.error || !coinPricesData.coins || coinPricesData.coins.length === 0) {
+      console.log(`⚠️ Warning: Coin prices not available for assets: ${interestedAssets.join(', ')}`);
+      console.log(`Error: ${coinPricesData.error || 'Unknown error'}`);
+    } else {
+      console.log(`✅ Successfully fetched ${coinPricesData.coins.length} coin prices`);
+      console.log(`Coins: ${coinPricesData.coins.map(c => c.symbol).join(', ')}`);
+    }
+
     // Fetch crypto news based on user preferences
     const contentTypes = preferences?.contentTypes || ['Market News'];
     const newsData = await cryptopanicService.getCryptoNews(
