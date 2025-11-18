@@ -14,21 +14,14 @@ const feedbackRoutes = require('./routes/feedback.routes');
 const app = express();
 const PORT = process.env.PORT || 3030;
 
-// Middleware
-app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Serve static images from imgs folder
-app.use('/images', express.static('imgs'));
-
-// CORS configuration - important for withCredentials: true
+// CORS configuration - MUST be FIRST middleware before any body parsing
 // Support multiple origins (localhost for dev, Vercel for production)
 let allowedOrigins = ['http://localhost:5173']; // Default for local dev
 
 if (process.env.FRONTEND_URL) {
-  // Support comma-separated URLs
-  allowedOrigins = process.env.FRONTEND_URL.split(',').map((url) => url.trim());
+  // Support comma-separated URLs - ADD to existing origins, don't replace
+  const envOrigins = process.env.FRONTEND_URL.split(',').map((url) => url.trim());
+  allowedOrigins = [...allowedOrigins, ...envOrigins];
 }
 
 // Always add production Vercel URL if not already present
@@ -40,6 +33,7 @@ if (!allowedOrigins.includes(productionFrontend)) {
 // Log allowed origins
 console.log('Allowed CORS origins:', allowedOrigins);
 
+// CORS middleware - MUST be before body parsing middleware
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -52,19 +46,30 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        // Log for debugging
-        console.log('CORS: Origin not allowed:', origin);
-        console.log('CORS: Allowed origins:', allowedOrigins);
+        // Log for debugging in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('CORS: Origin not allowed:', origin);
+          console.log('CORS: Allowed origins:', allowedOrigins);
+        }
         callback(new Error(`Origin ${origin} not allowed by CORS`));
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Type'],
     preflightContinue: false,
     optionsSuccessStatus: 204,
   })
 );
+
+// Body parsing middleware - AFTER CORS
+app.use(cookieParser());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static images from imgs folder
+app.use('/images', express.static('imgs'));
 
 // Session configuration
 app.use(
@@ -112,6 +117,10 @@ app.get('/', (req, res) => {
           save: 'POST /api/user/preferences',
           update: 'PUT /api/user/preferences',
         },
+        feedback: {
+          submit: 'POST /api/user/feedback',
+          history: 'GET /api/user/feedback',
+        },
       },
       dashboard: {
         get: 'GET /api/dashboard',
@@ -138,6 +147,17 @@ app.use((err, req, res, next) => {
   // Log errors in development, but not in production (security)
   if (process.env.NODE_ENV === 'development') {
     console.error('Error:', err);
+  }
+  
+  // Add CORS headers to error responses (use same origin check as CORS middleware)
+  const origin = req.headers.origin;
+  if (origin) {
+    // Check if origin is allowed (same logic as CORS middleware)
+    const isAllowed = allowedOrigins.includes(origin);
+    if (isAllowed) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
   }
   
   res.status(status).json({

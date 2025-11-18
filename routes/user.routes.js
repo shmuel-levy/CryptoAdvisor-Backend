@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const userStore = require('../services/user.store');
 const { verifyTokenMiddleware } = require('../middleware/auth.middleware');
 const {
   validatePreferences,
 } = require('../utils/preferences.validator');
+const Feedback = require('../models/Feedback');
 
 // GET /api/user - Get all users
 router.get('/', verifyTokenMiddleware, async (req, res, next) => {
@@ -205,6 +207,106 @@ router.delete('/:id', verifyTokenMiddleware, async (req, res, next) => {
     }
 
     res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/user/feedback - Save user feedback (Frontend-compatible endpoint)
+router.post('/feedback', verifyTokenMiddleware, async (req, res, next) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user.userId);
+    const { sectionType, vote, metadata, timestamp } = req.body;
+
+    // Validate sectionType
+    const validSectionTypes = ['coinPrices', 'marketNews', 'aiInsight', 'meme'];
+    if (!sectionType || !validSectionTypes.includes(sectionType)) {
+      return res.status(400).json({
+        message: `Invalid sectionType. Must be one of: ${validSectionTypes.join(', ')}`,
+      });
+    }
+
+    // Validate vote
+    if (!vote || (vote !== 'up' && vote !== 'down')) {
+      return res.status(400).json({
+        message: 'Invalid vote. Must be "up" or "down"',
+      });
+    }
+
+    // Map frontend format to database format
+    const type = vote === 'up' ? 'thumbs_up' : 'thumbs_down';
+    const section = sectionType;
+
+    // Create feedback entry
+    const feedback = new Feedback({
+      userId,
+      type,
+      section,
+      contentId: metadata?.contentId || null,
+      comment: metadata?.comment || null,
+    });
+
+    const savedFeedback = await feedback.save();
+
+    // Return response in frontend-expected format
+    res.status(200).json({
+      success: true,
+      message: 'Feedback submitted successfully',
+      feedback: {
+        id: savedFeedback._id.toString(),
+        userId: savedFeedback.userId.toString(),
+        sectionType: savedFeedback.section,
+        vote: savedFeedback.type === 'thumbs_up' ? 'up' : 'down',
+        metadata: {
+          contentId: savedFeedback.contentId || null,
+          comment: savedFeedback.comment || null,
+        },
+        createdAt: savedFeedback.createdAt,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/user/feedback - Get user's feedback history (Frontend-compatible)
+router.get('/feedback', verifyTokenMiddleware, async (req, res, next) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user.userId);
+    const { sectionType, limit = 50, offset = 0 } = req.query;
+
+    // Build query
+    const query = { userId };
+    if (sectionType && ['coinPrices', 'marketNews', 'aiInsight', 'meme'].includes(sectionType)) {
+      query.section = sectionType;
+    }
+
+    // Fetch feedback from MongoDB
+    const userFeedback = await Feedback.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(offset))
+      .select('-__v');
+
+    // Transform to frontend-expected format
+    const feedback = userFeedback.map((item) => ({
+      id: item._id.toString(),
+      userId: item.userId.toString(),
+      sectionType: item.section,
+      vote: item.type === 'thumbs_up' ? 'up' : 'down',
+      metadata: {
+        contentId: item.contentId || null,
+        comment: item.comment || null,
+      },
+      createdAt: item.createdAt,
+    }));
+
+    const count = await Feedback.countDocuments(query);
+
+    res.status(200).json({
+      feedback,
+      count,
+    });
   } catch (error) {
     next(error);
   }
